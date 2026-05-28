@@ -448,6 +448,12 @@ class InpaintRequest(BaseModel):
         return values
 
 
+class WatermarkDetectionMode(str, Enum):
+    CV_OCR = "cv_ocr"
+    VL_SAM = "vl_sam"
+    COMBINED = "combined"
+
+
 class RunPluginRequest(BaseModel):
     name: str
     image: str = Field(..., description="base64 encoded image")
@@ -455,6 +461,36 @@ class RunPluginRequest(BaseModel):
         [], description="Clicks for interactive seg, [[x,y,0/1], [x2,y2,0/1]]"
     )
     scale: float = Field(2.0, description="Scale for upscaling")
+
+    # Watermark detector plugin options. These fields are ignored by other plugins.
+    watermark_mode: WatermarkDetectionMode = Field(
+        WatermarkDetectionMode.CV_OCR,
+        description="Watermark detection strategy: cv_ocr, vl_sam, or combined",
+    )
+    watermark_prompt: str = Field(
+        "watermark, logo, text, signature",
+        description="Prompt used by open-vocabulary watermark detection backends",
+    )
+    watermark_confidence: float = Field(
+        0.35,
+        ge=0.0,
+        le=1.0,
+        description="Confidence threshold for watermark detection",
+    )
+    watermark_dilate: int = Field(
+        12, ge=0, le=256, description="Pixels used to dilate generated watermark masks"
+    )
+    watermark_max_area_ratio: float = Field(
+        0.35,
+        gt=0.0,
+        le=1.0,
+        description="Drop candidate masks larger than this image area ratio",
+    )
+
+    @model_validator(mode="after")
+    def validate_watermark_fields(cls, values: "RunPluginRequest"):
+        values.watermark_prompt = values.watermark_prompt.strip()[:256]
+        return values
 
 
 MediaTab = Literal["input", "output", "mask"]

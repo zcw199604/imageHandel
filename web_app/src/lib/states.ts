@@ -218,6 +218,7 @@ type AppAction = {
     pluginName: string,
     params?: PluginParams
   ) => Promise<void>
+  runWatermarkDetection: (mode: "cv_ocr" | "vl_sam" | "combined") => Promise<void>
 
   // EditorState
   getCurrentTargetFile: () => Promise<File>
@@ -580,7 +581,15 @@ export const useStore = createWithEqualityFn<AppState & AppAction>()(
             genMask,
             pluginName,
             targetFile,
-            params.upscale
+            params.upscale,
+            undefined,
+            {
+              watermarkMode: params.watermarkMode,
+              watermarkPrompt: params.watermarkPrompt,
+              watermarkConfidence: params.watermarkConfidence,
+              watermarkDilate: params.watermarkDilate,
+              watermarkMaxAreaRatio: params.watermarkMaxAreaRatio,
+            }
           )
           const { blob } = res
 
@@ -614,6 +623,17 @@ export const useStore = createWithEqualityFn<AppState & AppAction>()(
         }
         set((state) => {
           state.isPluginRunning = false
+        })
+      },
+
+
+      runWatermarkDetection: async (mode: "cv_ocr" | "vl_sam" | "combined") => {
+        await get().runRenderablePlugin(true, "WatermarkDetector", {
+          watermarkMode: mode,
+          watermarkPrompt: "watermark, logo, text, signature",
+          watermarkConfidence: 0.35,
+          watermarkDilate: 12,
+          watermarkMaxAreaRatio: 0.35,
         })
       },
 

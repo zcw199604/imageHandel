@@ -10,6 +10,7 @@ import {
 import { Button } from "./ui/button"
 import {
   Blocks,
+  BadgeCheck,
   Fullscreen,
   MousePointerClick,
   Slice,
@@ -25,6 +26,7 @@ export enum PluginName {
   GFPGAN = "GFPGAN",
   RestoreFormer = "RestoreFormer",
   InteractiveSeg = "InteractiveSeg",
+  WatermarkDetector = "WatermarkDetector",
 }
 
 // TODO: get plugin config from server and using form-render??
@@ -53,6 +55,10 @@ const pluginMap = {
     IconClass: MousePointerClick,
     showName: "Interactive Segmentation",
   },
+  [PluginName.WatermarkDetector]: {
+    IconClass: BadgeCheck,
+    showName: "Watermark Detector",
+  },
 }
 
 const Plugins = () => {
@@ -62,12 +68,14 @@ const Plugins = () => {
     isPluginRunning,
     updateInteractiveSegState,
     runRenderablePlugin,
+    runWatermarkDetection,
   ] = useStore((state) => [
     state.file,
     state.serverConfig.plugins,
     state.isPluginRunning,
     state.updateInteractiveSegState,
     state.runRenderablePlugin,
+    state.runWatermarkDetection,
   ])
   const disabled = !file
 
@@ -81,6 +89,33 @@ const Plugins = () => {
     } else {
       runRenderablePlugin(genMask, pluginName)
     }
+  }
+
+  const renderWatermarkDetectorPlugin = () => {
+    return (
+      <DropdownMenuSub key="WatermarkDetector">
+        <DropdownMenuSubTrigger disabled={disabled}>
+          <div className="flex gap-2 items-center">
+            <BadgeCheck className="p-1" />
+            Watermark Detector
+          </div>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuItem onClick={() => runWatermarkDetection("cv_ocr")}>
+            Detect with CV/OCR
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => runWatermarkDetection("vl_sam")}>
+            Detect with Open Vocabulary
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => runWatermarkDetection("combined")}>
+            Detect with Both
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled>
+            Use only on owned or authorized images
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+    )
   }
 
   const renderRealESRGANPlugin = () => {
@@ -139,6 +174,9 @@ const Plugins = () => {
       const { IconClass, showName } = pluginMap[plugin.name as PluginName]
       if (plugin.name === PluginName.RealESRGAN) {
         return renderRealESRGANPlugin()
+      }
+      if (plugin.name === PluginName.WatermarkDetector) {
+        return renderWatermarkDetectorPlugin()
       }
       if (
         plugin.name === PluginName.RemoveBG ||

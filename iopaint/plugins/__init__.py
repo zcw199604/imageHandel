@@ -8,6 +8,7 @@ from .interactive_seg import InteractiveSeg
 from .realesrgan import RealESRGANUpscaler
 from .remove_bg import RemoveBG
 from .restoreformer import RestoreFormerPlugin
+from .watermark_detector import WatermarkDetectorPlugin
 from ..schema import InteractiveSegModel, Device, RealESRGANModel
 
 
@@ -29,6 +30,9 @@ def build_plugins(
     no_half: bool,
 ) -> Dict:
     plugins = {}
+
+    logger.info(f"Initialize {WatermarkDetectorPlugin.name} plugin")
+    plugins[WatermarkDetectorPlugin.name] = WatermarkDetectorPlugin()
     if enable_interactive_seg:
         logger.info(f"Initialize {InteractiveSeg.name} plugin")
         plugins[InteractiveSeg.name] = InteractiveSeg(

@@ -5,6 +5,7 @@ import {
   PowerPaintTask,
   Rect,
   ServerConfig,
+  WatermarkDetectionMode,
 } from "@/lib/types"
 import { Settings } from "@/lib/states"
 import { convertToBase64, srcToFile } from "@/lib/utils"
@@ -129,7 +130,14 @@ export async function runPlugin(
   name: string,
   imageFile: File,
   upscale?: number,
-  clicks?: number[][]
+  clicks?: number[][],
+  watermarkOptions?: {
+    watermarkMode?: WatermarkDetectionMode
+    watermarkPrompt?: string
+    watermarkConfidence?: number
+    watermarkDilate?: number
+    watermarkMaxAreaRatio?: number
+  }
 ) {
   const imageBase64 = await convertToBase64(imageFile)
   const p = genMask ? "run_plugin_gen_mask" : "run_plugin_gen_image"
@@ -143,6 +151,11 @@ export async function runPlugin(
       image: imageBase64,
       scale: upscale,
       clicks,
+      watermark_mode: watermarkOptions?.watermarkMode,
+      watermark_prompt: watermarkOptions?.watermarkPrompt,
+      watermark_confidence: watermarkOptions?.watermarkConfidence,
+      watermark_dilate: watermarkOptions?.watermarkDilate,
+      watermark_max_area_ratio: watermarkOptions?.watermarkMaxAreaRatio,
     }),
   })
   if (res.ok) {

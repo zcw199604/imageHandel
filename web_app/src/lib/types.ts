@@ -64,10 +64,19 @@ export enum PluginName {
   GFPGAN = "GFPGAN",
   RestoreFormer = "RestoreFormer",
   InteractiveSeg = "InteractiveSeg",
+  WatermarkDetector = "WatermarkDetector",
 }
 
+export type WatermarkDetectionMode = "cv_ocr" | "vl_sam" | "combined"
+
+
 export interface PluginParams {
-  upscale: number
+  upscale?: number
+  watermarkMode?: WatermarkDetectionMode
+  watermarkPrompt?: string
+  watermarkConfidence?: number
+  watermarkDilate?: number
+  watermarkMaxAreaRatio?: number
 }
 
 export enum SortBy {
