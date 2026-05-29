@@ -97,21 +97,21 @@ const Plugins = () => {
         <DropdownMenuSubTrigger disabled={disabled}>
           <div className="flex gap-2 items-center">
             <BadgeCheck className="p-1" />
-            Watermark Detector
+            水印检测
           </div>
         </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent>
+        <DropdownMenuSubContent className="max-w-[calc(100vw-2rem)]">
           <DropdownMenuItem onClick={() => runWatermarkDetection("cv_ocr")}>
-            Detect with CV/OCR
+            使用 CV/OCR 检测
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => runWatermarkDetection("vl_sam")}>
-            Detect with Open Vocabulary
+            使用开放词汇检测
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => runWatermarkDetection("combined")}>
-            Detect with Both
+            同时使用两种策略
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
-            Use only on owned or authorized images
+            仅用于本人拥有或已授权图片，修复前请先预览 mask
           </DropdownMenuItem>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
@@ -230,7 +230,11 @@ const Plugins = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="start">
+      <DropdownMenuContent
+        side="bottom"
+        align="start"
+        className="max-w-[calc(100vw-2rem)]"
+      >
         {renderPlugins()}
       </DropdownMenuContent>
     </DropdownMenu>

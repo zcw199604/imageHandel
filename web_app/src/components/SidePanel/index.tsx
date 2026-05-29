@@ -46,7 +46,7 @@ const SidePanel = () => {
     <Sheet open={open} modal={false}>
       <SheetTrigger
         tabIndex={-1}
-        className="z-10 outline-none absolute top-[68px] right-6 rounded-lg border bg-background"
+        className="z-10 outline-none absolute top-[calc(var(--app-header-height)+var(--safe-area-top)+0.5rem)] right-[calc(0.75rem+var(--safe-area-right))] md:right-6 rounded-lg border bg-background"
         hidden={open}
       >
         <Button
@@ -61,7 +61,7 @@ const SidePanel = () => {
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="min-w-[286px] max-w-full mt-[60px] outline-none pl-3 pr-1"
+        className="w-[min(100vw,360px)] min-w-0 max-w-full mt-[calc(var(--app-header-height)+var(--safe-area-top))] outline-none pl-3 pr-[calc(0.25rem+var(--safe-area-right))]"
         onOpenAutoFocus={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
       >

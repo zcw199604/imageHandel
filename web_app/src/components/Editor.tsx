@@ -37,6 +37,8 @@ import {
 } from "@/lib/const"
 
 const TOOLBAR_HEIGHT = 200
+const MOBILE_TOOLBAR_HEIGHT = 176
+const MOBILE_HEADER_HEIGHT = 120
 const COMPARE_SLIDER_DURATION_MS = 300
 
 interface EditorProps {
@@ -126,6 +128,9 @@ export default function Editor(props: EditorProps) {
   const [initialCentered, setInitialCentered] = useState(false)
 
   const [isDraging, setIsDraging] = useState(false)
+  const isMobileViewport = windowSize.width < 768
+  const [mobileMode, setMobileMode] = useState<"draw" | "pan">("draw")
+  const isPanMode = isPanning || (isMobileViewport && mobileMode === "pan")
 
   const [sliderPos, setSliderPos] = useState<number>(0)
   const [isChangingBrushSizeByWheel, setIsChangingBrushSizeByWheel] =
@@ -249,7 +254,10 @@ export default function Editor(props: EditorProps) {
     }
 
     const rW = windowSize.width / width
-    const rH = (windowSize.height - TOOLBAR_HEIGHT) / height
+    const reservedHeight = isMobileViewport
+      ? MOBILE_TOOLBAR_HEIGHT + MOBILE_HEADER_HEIGHT
+      : TOOLBAR_HEIGHT
+    const rH = (windowSize.height - reservedHeight) / height
 
     let s = 1.0
     if (rW < 1 || rH < 1) {
@@ -287,6 +295,7 @@ export default function Editor(props: EditorProps) {
     windowSize,
     initialCentered,
     getCurrentWidthHeight,
+    isMobileViewport,
   ])
 
   useEffect(() => {
@@ -305,7 +314,9 @@ export default function Editor(props: EditorProps) {
       return
     }
     const offsetX = (windowSize.width - imageWidth * minScale) / 2
-    const offsetY = (windowSize.height - imageHeight * minScale) / 2
+    const offsetY =
+      (windowSize.height - imageHeight * minScale) / 2 +
+      (isMobileViewport ? 24 : 0)
     viewport.setTransform(offsetX, offsetY, minScale, 200, "easeOutQuad")
     if (viewport.instance.transformState.scale) {
       viewport.instance.transformState.scale = minScale
@@ -320,16 +331,16 @@ export default function Editor(props: EditorProps) {
     imageWidth,
     windowSize.height,
     minScale,
+    isMobileViewport,
   ])
 
   useEffect(() => {
-    window.addEventListener("resize", () => {
+    const handleResize = () => {
       resetZoom()
-    })
+    }
+    window.addEventListener("resize", handleResize)
     return () => {
-      window.removeEventListener("resize", () => {
-        resetZoom()
-      })
+      window.removeEventListener("resize", handleResize)
     }
   }, [windowSize, resetZoom])
 
@@ -365,7 +376,7 @@ export default function Editor(props: EditorProps) {
     if (interactiveSegState.isInteractiveSeg) {
       return
     }
-    if (isPanning) {
+    if (isPanMode) {
       return
     }
     if (!isDraging) {
@@ -415,7 +426,7 @@ export default function Editor(props: EditorProps) {
     if (interactiveSegState.isInteractiveSeg) {
       return
     }
-    if (isPanning) {
+    if (isPanMode) {
       return
     }
     if (!original.src) {
@@ -460,7 +471,7 @@ export default function Editor(props: EditorProps) {
     if (interactiveSegState.isInteractiveSeg) {
       return
     }
-    if (isPanning) {
+    if (isPanMode) {
       return
     }
     if (!isOriginalLoaded) {
@@ -536,12 +547,12 @@ export default function Editor(props: EditorProps) {
           file.type
         )
         toast({
-          description: "Save image success",
+          description: "图片保存成功",
         })
       } catch (e: any) {
         toast({
           variant: "destructive",
-          title: "Uh oh! Something went wrong.",
+          title: "操作失败",
           description: e.message ? e.message : e.toString(),
         })
       }
@@ -588,14 +599,14 @@ export default function Editor(props: EditorProps) {
     if (isProcessing) {
       return "default"
     }
-    if (isPanning) {
+    if (isPanMode) {
       return "grab"
     }
     if (showBrush) {
       return "none"
     }
     return undefined
-  }, [showBrush, isPanning, isProcessing])
+  }, [showBrush, isPanMode, isProcessing])
 
   useHotKey(
     "[",
@@ -632,7 +643,7 @@ export default function Editor(props: EditorProps) {
         if (context?.canvas) {
           await copyCanvasImage(context?.canvas)
           toast({
-            title: "Copy inpainting result to clipboard",
+            title: "修复结果已复制到剪贴板",
           })
         }
       }
@@ -761,7 +772,7 @@ export default function Editor(props: EditorProps) {
             viewportRef.current = r
           }
         }}
-        panning={{ disabled: !isPanning, velocityDisabled: true }}
+        panning={{ disabled: !isPanMode, velocityDisabled: true }}
         wheel={{ step: 0.05, wheelDisabled: isChangingBrushSizeByWheel }}
         centerZoomedOut
         alignmentAnimation={{ disabled: true }}
@@ -824,9 +835,24 @@ export default function Editor(props: EditorProps) {
               onMouseDown={onMouseDown}
               onMouseUp={onCanvasMouseUp}
               onMouseMove={onMouseDrag}
-              onTouchStart={onMouseDown}
-              onTouchEnd={onCanvasMouseUp}
-              onTouchMove={onMouseDrag}
+              onTouchStart={(ev) => {
+                ev.preventDefault()
+                onMouseDown(ev)
+              }}
+              onTouchEnd={(ev) => {
+                ev.preventDefault()
+                onCanvasMouseUp(ev)
+                onPointerUp(ev)
+              }}
+              onTouchCancel={(ev) => {
+                ev.preventDefault()
+                setIsDraging(false)
+                setIsPanning(false)
+              }}
+              onTouchMove={(ev) => {
+                ev.preventDefault()
+                onMouseDrag(ev)
+              }}
               ref={(r) => {
                 if (r && !context) {
                   const ctx = r.getContext("2d")
@@ -910,7 +936,7 @@ export default function Editor(props: EditorProps) {
 
   return (
     <div
-      className="flex w-screen h-screen justify-center items-center"
+      className="flex w-screen h-[100dvh] justify-center items-center pt-[calc(var(--app-header-height)+var(--safe-area-top))] pb-[calc(5.5rem+var(--safe-area-bottom))] overflow-hidden"
       aria-hidden="true"
       onMouseMove={onMouseMove}
       onMouseUp={onPointerUp}
@@ -919,16 +945,16 @@ export default function Editor(props: EditorProps) {
       {renderCanvas()}
       {showBrush &&
         !isInpainting &&
-        !isPanning &&
+        !isPanMode &&
         (interactiveSegState.isInteractiveSeg
           ? renderInteractiveSegCursor()
           : renderBrush(getBrushStyle(x, y)))}
 
       {showRefBrush && renderBrush(getBrushStyle(windowCenterX, windowCenterY))}
 
-      <div className="fixed flex bottom-5 border px-4 py-2 rounded-[3rem] gap-8 items-center justify-center backdrop-filter backdrop-blur-md bg-background/70">
+      <div className="fixed flex bottom-[calc(1rem+var(--safe-area-bottom))] left-1/2 max-w-[calc(100vw-var(--safe-area-left)-var(--safe-area-right)-1rem)] -translate-x-1/2 overflow-x-auto border px-3 py-2 rounded-[3rem] gap-4 md:gap-8 items-center justify-start md:justify-center backdrop-filter backdrop-blur-md bg-background/70">
         <Slider
-          className="w-48"
+          className="w-36 shrink-0 md:w-48"
           defaultValue={[50]}
           min={MIN_BRUSH_SIZE}
           max={MAX_BRUSH_SIZE}
@@ -939,29 +965,44 @@ export default function Editor(props: EditorProps) {
           onClick={() => setShowRefBrush(false)}
         />
         <div className="flex gap-2">
+          {isMobileViewport ? (
+            <IconButton
+              tooltip={mobileMode === "draw" ? "绘制模式" : "平移模式"}
+              onClick={() => {
+                setMobileMode((mode) => (mode === "draw" ? "pan" : "draw"))
+                setShowBrush(false)
+                setIsPanning(false)
+                setIsDraging(false)
+              }}
+            >
+              <CursorArrowRaysIcon />
+            </IconButton>
+          ) : (
+            <></>
+          )}
           <IconButton
-            tooltip="Reset zoom & pan"
+            tooltip="重置缩放/平移"
             disabled={scale === minScale && panned === false}
             onClick={resetZoom}
           >
             <Expand />
           </IconButton>
           <IconButton
-            tooltip="Undo"
+            tooltip="撤销"
             onClick={handleUndo}
             disabled={undoDisabled}
           >
             <Undo />
           </IconButton>
           <IconButton
-            tooltip="Redo"
+            tooltip="重做"
             onClick={handleRedo}
             disabled={redoDisabled}
           >
             <Redo />
           </IconButton>
           <IconButton
-            tooltip="Show original image"
+            tooltip="查看原图"
             onPointerDown={(ev) => {
               ev.preventDefault()
               setShowOriginal(() => {
@@ -986,7 +1027,7 @@ export default function Editor(props: EditorProps) {
             <Eye />
           </IconButton>
           <IconButton
-            tooltip="Save Image"
+            tooltip="保存图片"
             disabled={!renders.length}
             onClick={download}
           >
@@ -996,7 +1037,7 @@ export default function Editor(props: EditorProps) {
           {settings.enableManualInpainting &&
           settings.model.model_type === "inpaint" ? (
             <IconButton
-              tooltip="Run Inpainting"
+              tooltip="运行修复"
               disabled={
                 isProcessing || (!hadDrawSomething() && extraMasks.length === 0)
               }

@@ -24,7 +24,7 @@ const Workspace = () => {
 
   return (
     <>
-      <div className="flex gap-3 absolute top-[68px] left-[24px] items-center">
+      <div className="flex gap-2 md:gap-3 absolute top-[calc(var(--app-header-height)+var(--safe-area-top)+0.5rem)] left-[calc(0.75rem+var(--safe-area-left))] md:left-[24px] max-w-[calc(100vw-1.5rem)] items-center overflow-x-auto">
         <Plugins />
         <ImageSize />
       </div>

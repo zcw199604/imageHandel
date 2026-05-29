@@ -85,8 +85,8 @@ const Header = () => {
   }
 
   return (
-    <header className="h-[60px] px-6 py-4 absolute top-[0] flex justify-between items-center w-full z-20 border-b backdrop-filter backdrop-blur-md bg-background/70">
-      <div className="flex items-center gap-1">
+    <header className="min-h-[60px] px-[calc(0.75rem+var(--safe-area-left))] md:px-6 py-3 md:py-4 absolute top-[0] flex flex-wrap md:flex-nowrap justify-between items-center gap-2 w-full z-20 border-b backdrop-filter backdrop-blur-md bg-background/70">
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
         {serverConfig.enableFileManager ? (
           <FileManager photoWidth={512} onPhotoClick={handleOnPhotoClick} />
         ) : (
@@ -95,7 +95,7 @@ const Header = () => {
 
         <ImageUploadButton
           disabled={isInpainting}
-          tooltip="Upload image"
+          tooltip="上传图片"
           onFileUpload={(file) => {
             setFile(file)
           }}
@@ -111,7 +111,7 @@ const Header = () => {
         >
           <ImageUploadButton
             disabled={isInpainting}
-            tooltip="Upload custom mask"
+            tooltip="上传自定义遮罩"
             onFileUpload={async (file) => {
               let newCustomMask: HTMLImageElement | null = null
               try {
@@ -129,7 +129,7 @@ const Header = () => {
               ) {
                 toast({
                   variant: "destructive",
-                  description: `The size of the mask must same as image: ${imageWidth}x${imageHeight}`,
+                  description: `遮罩尺寸必须与图片一致: ${imageWidth}x${imageHeight}`,
                 })
                 return
               }
@@ -158,7 +158,7 @@ const Header = () => {
                   }
                 }}
               >
-                <IconButton tooltip="Run custom mask">
+                <IconButton tooltip="运行自定义遮罩">
                   <PlayIcon />
                 </IconButton>
               </PopoverTrigger>
@@ -178,7 +178,7 @@ const Header = () => {
         {file && !model.need_prompt ? (
           <IconButton
             disabled={isInpainting}
-            tooltip="Rerun previous mask"
+            tooltip="重新运行上一遮罩"
             onClick={handleRerunLastMask}
             onMouseEnter={onRerunMouseEnter}
             onMouseLeave={onRerunMouseLeave}
@@ -192,7 +192,7 @@ const Header = () => {
 
       {model.need_prompt ? <PromptInput /> : <></>}
 
-      <div className="flex gap-1">
+      <div className="flex shrink-0 gap-1">
         <Coffee />
         <Shortcuts />
         {serverConfig.disableModelSwitch ? <></> : <SettingsDialog />}

@@ -632,8 +632,8 @@ export const useStore = createWithEqualityFn<AppState & AppAction>()(
           watermarkMode: mode,
           watermarkPrompt: "watermark, logo, text, signature",
           watermarkConfidence: 0.35,
-          watermarkDilate: 12,
-          watermarkMaxAreaRatio: 0.35,
+          watermarkDilate: 6,
+          watermarkMaxAreaRatio: 0.1,
         })
       },
 

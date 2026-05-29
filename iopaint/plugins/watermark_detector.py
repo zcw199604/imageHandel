@@ -68,8 +68,19 @@ class WatermarkDetectorPlugin(BasePlugin):
         _, contrast_mask = cv2.threshold(
             contrast, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
         )
+        # Translucent text printed over a person can have weak global contrast.
+        # Subtract a blurred local background to recover text strokes while
+        # keeping broad body contours as one large component that will be
+        # filtered out below.
+        local_background = cv2.GaussianBlur(gray, (31, 31), 0)
+        light_strokes = cv2.subtract(gray, local_background)
+        _, light_text_mask = cv2.threshold(
+            light_strokes, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
+        )
 
-        # Edge-dense transparent marks and signatures.
+        # Edge-dense transparent marks and signatures. Edges are only used
+        # together with low-saturation bright overlays to avoid selecting
+        # natural body/clothing contours as watermarks.
         edges = cv2.Canny(gray, 80, 180)
         edge_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 3))
         edge_mask = cv2.dilate(edges, edge_kernel, iterations=1)
@@ -80,10 +91,21 @@ class WatermarkDetectorPlugin(BasePlugin):
         bright = cv2.inRange(hsv[:, :, 2], 145, 255)
         low_sat_bright = cv2.bitwise_and(low_sat, bright)
 
-        raw = cv2.bitwise_or(contrast_mask, edge_mask)
-        raw = cv2.bitwise_or(raw, cv2.bitwise_and(low_sat_bright, edge_mask))
-        raw = self._keep_plausible_components(raw, width, height, req.watermark_max_area_ratio)
-        return raw
+        low_sat_edge = cv2.bitwise_and(low_sat_bright, edge_mask)
+        # Filter every cue before merging.  If all cues are OR'ed first, weak
+        # translucent text can accidentally connect to broad person contours and
+        # then be rejected as one oversized body-like component.
+        contrast_text = self._keep_plausible_components(
+            contrast_mask, width, height, req.watermark_max_area_ratio
+        )
+        light_text = self._keep_plausible_components(
+            light_text_mask, width, height, min(req.watermark_max_area_ratio, 0.03)
+        )
+        low_sat_text = self._keep_plausible_components(
+            low_sat_edge, width, height, min(req.watermark_max_area_ratio, 0.03)
+        )
+        low_sat_text = cv2.bitwise_and(low_sat_text, light_text)
+        return cv2.bitwise_or(cv2.bitwise_or(contrast_text, light_text), low_sat_text)
 
     def detect_vl_sam(self, rgb_np_img: np.ndarray, req: RunPluginRequest) -> np.ndarray:
         """Open-vocabulary detector/SAM adapter.
@@ -102,9 +124,9 @@ class WatermarkDetectorPlugin(BasePlugin):
 
         logger.info(
             "Watermark open-vocabulary backend is not configured; "
-            "falling back to saliency/text-like CV mask."
+            "returning an empty mask to avoid saliency false positives."
         )
-        return self._detect_saliency_fallback(rgb_np_img, req)
+        return np.zeros(rgb_np_img.shape[:2], dtype=np.uint8)
 
     def merge_masks(self, masks: list[np.ndarray], shape: tuple[int, int]) -> np.ndarray:
         merged = np.zeros(shape, dtype=np.uint8)
@@ -117,16 +139,21 @@ class WatermarkDetectorPlugin(BasePlugin):
     def post_process_mask(self, mask: np.ndarray, req: RunPluginRequest) -> np.ndarray:
         mask = self._as_gray_mask(mask, mask.shape[:2])
         if req.watermark_dilate > 0:
-            kernel_size = max(1, int(req.watermark_dilate))
+            # Cap dilation by image size so small false positives are not
+            # expanded into visible body/object repaint regions.
+            height, width = mask.shape[:2]
+            adaptive_cap = max(1, int(round(min(width, height) * 0.015)))
+            kernel_size = max(0, min(int(req.watermark_dilate), adaptive_cap))
+            horizontal_radius = max(1, kernel_size)
             kernel = cv2.getStructuringElement(
-                cv2.MORPH_ELLIPSE, (kernel_size * 2 + 1, kernel_size * 2 + 1)
+                cv2.MORPH_ELLIPSE, (horizontal_radius * 2 + 1, 1)
             )
             mask = cv2.dilate(mask, kernel, iterations=1)
-        close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 3))
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, close_kernel)
         mask = cv2.medianBlur(mask, 3)
         _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
-        return mask
+        return self._enforce_mask_safety(mask, req.watermark_max_area_ratio)
 
     def _detect_saliency_fallback(self, rgb_np_img: np.ndarray, req: RunPluginRequest) -> np.ndarray:
         gray = cv2.cvtColor(rgb_np_img, cv2.COLOR_RGB2GRAY)
@@ -150,11 +177,93 @@ class WatermarkDetectorPlugin(BasePlugin):
                 continue
             if w > width * 0.95 and h > height * 0.95:
                 continue
-            # Keep text/logo-like components: thin text, strips, corner badges or signatures.
+            # Keep text/logo-like components and reject thick central blobs that
+            # usually correspond to people, clothing, or foreground objects.
             aspect = w / max(h, 1)
-            touches_border = x < width * 0.08 or y < height * 0.08 or x + w > width * 0.92 or y + h > height * 0.92
-            if aspect >= 1.2 or touches_border or area < image_area * 0.02:
+            bbox_area = float(max(w * h, 1))
+            fill_ratio = area / bbox_area
+            component_area_ratio = area / image_area
+            touches_border = (
+                x < width * 0.08
+                or y < height * 0.08
+                or x + w > width * 0.92
+                or y + h > height * 0.92
+            )
+            central_large_blob = (
+                not touches_border
+                and w > width * 0.22
+                and h > height * 0.18
+                and aspect < 1.8
+            )
+            if central_large_blob:
+                continue
+            long_text_line = aspect >= 2.0 and h <= height * 0.22
+            text_like_shape = (
+                aspect >= 1.15
+                or h <= height * 0.16
+                or w <= width * 0.28
+            )
+            text_like_area = (
+                component_area_ratio <= 0.035
+                or (long_text_line and component_area_ratio <= max_area_ratio)
+            )
+            text_like = (
+                text_like_shape
+                and text_like_area
+                and (
+                    0.08 <= fill_ratio <= 0.98
+                    # Morphological text cues may merge a whole word into a
+                    # nearly solid, very wide strip.  Keep that case while the
+                    # central_large_blob gate still rejects body-shaped blobs.
+                    or (long_text_line and fill_ratio <= 1.0)
+                )
+            )
+            small_mark = component_area_ratio <= min(max_area_ratio * 0.25, 0.015)
+            border_mark = touches_border and component_area_ratio <= min(max_area_ratio * 0.5, 0.03)
+            if text_like or small_mark or border_mark:
                 output[labels == label] = 255
+        return output
+
+    def _enforce_mask_safety(self, mask: np.ndarray, max_area_ratio: float) -> np.ndarray:
+        height, width = mask.shape[:2]
+        image_area = float(width * height)
+        max_component_area = int(image_area * max_area_ratio)
+        safe_total_area = int(image_area * min(max_area_ratio, 0.12))
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+        kept: list[tuple[int, int]] = []
+        for label in range(1, num_labels):
+            x, y, w, h, area = stats[label]
+            if area <= 0 or area > max_component_area:
+                continue
+            aspect = w / max(h, 1)
+            bbox_area = float(max(w * h, 1))
+            fill_ratio = area / bbox_area
+            component_area_ratio = area / image_area
+            touches_border = (
+                x < width * 0.08
+                or y < height * 0.08
+                or x + w > width * 0.92
+                or y + h > height * 0.92
+            )
+            small_isolated_noise = (
+                component_area_ratio <= 0.002
+                and not touches_border
+                and (w <= width * 0.12 or h <= height * 0.06)
+                and not (aspect >= 1.8 and fill_ratio >= 0.08)
+            )
+            if small_isolated_noise:
+                continue
+            if not touches_border and w > width * 0.3 and h > height * 0.2 and aspect < 1.8:
+                continue
+            kept.append((label, int(area)))
+
+        output = np.zeros_like(mask)
+        used_area = 0
+        for label, area in sorted(kept, key=lambda item: item[1], reverse=True):
+            if used_area + area > safe_total_area:
+                continue
+            output[labels == label] = 255
+            used_area += area
         return output
 
     def _as_gray_mask(self, mask: np.ndarray, shape: tuple[int, int]) -> np.ndarray:

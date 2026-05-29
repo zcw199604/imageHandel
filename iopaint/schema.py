@@ -478,10 +478,10 @@ class RunPluginRequest(BaseModel):
         description="Confidence threshold for watermark detection",
     )
     watermark_dilate: int = Field(
-        12, ge=0, le=256, description="Pixels used to dilate generated watermark masks"
+        6, ge=0, le=256, description="Pixels used to dilate generated watermark masks"
     )
     watermark_max_area_ratio: float = Field(
-        0.35,
+        0.1,
         gt=0.0,
         le=1.0,
         description="Drop candidate masks larger than this image area ratio",

@@ -19,7 +19,7 @@ function ShortCut(props: ShortcutProps) {
   const { content, keys } = props
 
   return (
-    <div className="flex justify-between">
+    <div className="flex justify-between gap-4">
       <div>{content}</div>
       <div className="flex gap-[8px]">
         {keys.map((k) => (
@@ -51,31 +51,31 @@ export function Shortcuts() {
   return (
     <Dialog open={open} onOpenChange={toggleOpen}>
       <DialogTrigger asChild>
-        <IconButton tooltip="Hotkeys">
+        <IconButton tooltip="快捷键">
           <Keyboard />
         </IconButton>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-[calc(100vw-1rem)]">
         <DialogHeader>
-          <DialogTitle>Hotkeys</DialogTitle>
+          <DialogTitle>快捷键</DialogTitle>
           <div className="flex gap-2 flex-col pt-4">
-            <ShortCut content="Pan" keys={["Space + Drag"]} />
-            <ShortCut content="Reset Zoom/Pan" keys={["Esc"]} />
-            <ShortCut content="Decrease Brush Size" keys={["["]} />
-            <ShortCut content="Increase Brush Size" keys={["]"]} />
-            <ShortCut content="View Original Image" keys={["Hold Tab"]} />
+            <ShortCut content="平移" keys={["空格 + 拖动"]} />
+            <ShortCut content="重置缩放/平移" keys={["Esc"]} />
+            <ShortCut content="减小画笔" keys={["["]} />
+            <ShortCut content="增大画笔" keys={["]"]} />
+            <ShortCut content="查看原图" keys={["按住 Tab"]} />
 
-            <ShortCut content="Undo" keys={[CmdOrCtrl(), "Z"]} />
-            <ShortCut content="Redo" keys={[CmdOrCtrl(), "Shift", "Z"]} />
-            <ShortCut content="Copy Result" keys={[CmdOrCtrl(), "C"]} />
-            <ShortCut content="Paste Image" keys={[CmdOrCtrl(), "V"]} />
+            <ShortCut content="撤销" keys={[CmdOrCtrl(), "Z"]} />
+            <ShortCut content="重做" keys={[CmdOrCtrl(), "Shift", "Z"]} />
+            <ShortCut content="复制结果" keys={[CmdOrCtrl(), "C"]} />
+            <ShortCut content="粘贴图片" keys={[CmdOrCtrl(), "V"]} />
             <ShortCut
-              content="Trigger Manually Inpainting"
+              content="手动触发修复"
               keys={["Shift", "R"]}
             />
-            <ShortCut content="Toggle Hotkeys Dialog" keys={["H"]} />
-            <ShortCut content="Toggle Settings Dialog" keys={["S"]} />
-            <ShortCut content="Toggle File Manager" keys={["F"]} />
+            <ShortCut content="打开/关闭快捷键" keys={["H"]} />
+            <ShortCut content="打开/关闭设置" keys={["S"]} />
+            <ShortCut content="打开/关闭文件管理" keys={["F"]} />
           </div>
         </DialogHeader>
       </DialogContent>

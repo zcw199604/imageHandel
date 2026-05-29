@@ -90,10 +90,16 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 
 export interface UploadButtonProps extends IconButtonProps {
   onFileUpload: (file: File) => void
+  accept?: string
 }
 
 const ImageUploadButton = (props: UploadButtonProps) => {
-  const { onFileUpload, children, ...rest } = props
+  const {
+    onFileUpload,
+    children,
+    accept = ".png,.jpg,.jpeg,.webp,.bmp,.gif",
+    ...rest
+  } = props
 
   const [uploadElemId] = React.useState(
     `file-upload-${Math.random().toString()}`
@@ -119,7 +125,7 @@ const ImageUploadButton = (props: UploadButtonProps) => {
         name={uploadElemId}
         type="file"
         onChange={handleChange}
-        accept="image/png, image/jpeg"
+        accept={accept}
       />
     </>
   )

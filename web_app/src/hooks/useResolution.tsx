@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from "react"
+
+export type Resolution = "mobile" | "tablet" | "desktop"
+
+export const MOBILE_BREAKPOINT = 768
+export const TABLET_BREAKPOINT = 1224
 
 const useResolution = () => {
-  const [width, setWidth] = useState(window.innerWidth)
+  const getWindowWidth = () =>
+    typeof window === "undefined" ? TABLET_BREAKPOINT : window.innerWidth
+
+  const [width, setWidth] = useState(getWindowWidth)
 
   const windowSizeHandler = useCallback(() => {
     setWidth(window.innerWidth)
@@ -13,19 +21,17 @@ const useResolution = () => {
     return () => {
       window.removeEventListener('resize', windowSizeHandler)
     }
-  })
+  }, [windowSizeHandler])
 
-  if (width < 768) {
-    return 'mobile'
+  if (width < MOBILE_BREAKPOINT) {
+    return "mobile"
   }
 
-  if (width >= 768 && width < 1224) {
-    return 'tablet'
+  if (width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT) {
+    return "tablet"
   }
 
-  if (width >= 1224) {
-    return 'desktop'
-  }
+  return "desktop"
 }
 
 export default useResolution

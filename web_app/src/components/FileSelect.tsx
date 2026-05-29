@@ -34,13 +34,13 @@ export default function FileSelect(props: FileSelectProps) {
   }
 
   return (
-    <div className="absolute flex w-screen h-screen justify-center items-center pointer-events-none">
+    <div className="absolute flex w-screen h-[100dvh] px-4 justify-center items-center pointer-events-none">
       <label
         htmlFor={uploadElemId}
-        className="grid bg-background border-[2px] border-[dashed] rounded-lg min-w-[600px] hover:bg-primary hover:text-primary-foreground pointer-events-auto"
+        className="grid bg-background border-[2px] border-[dashed] rounded-lg w-full max-w-[600px] min-w-0 hover:bg-primary hover:text-primary-foreground pointer-events-auto"
       >
         <div
-          className="grid p-16 w-full h-full"
+          className="grid p-8 md:p-16 w-full h-full"
           onDragOver={(ev) => {
             ev.stopPropagation()
             ev.preventDefault()
@@ -57,12 +57,12 @@ export default function FileSelect(props: FileSelectProps) {
                 onFileSelected(file)
               }
             }}
-            accept="image/png, image/jpeg"
+            accept=".png,.jpg,.jpeg,.webp,.bmp,.gif"
           />
           <p className="text-center">
             {resolution === "desktop"
-              ? "Click here or drag an image file"
-              : "Tap here to load your picture"}
+              ? "点击此处或拖入图片文件"
+              : "点击此处加载图片"}
           </p>
         </div>
       </label>

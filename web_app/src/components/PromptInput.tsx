@@ -60,14 +60,14 @@ const PromptInput = () => {
   }
 
   return (
-    <div className="flex gap-4 relative w-full justify-center h-full">
-      <div className="absolute flex gap-4">
+    <div className="flex gap-2 md:gap-4 relative flex-1 min-w-[180px] justify-center h-full order-last md:order-none">
+      <div className="relative md:absolute flex w-full max-w-[540px] gap-2 md:gap-4">
         <Textarea
           ref={ref}
           placeholder="I want to repaint of..."
           className={cn(
             showScroll ? "focus:overflow-y-auto" : "overflow-y-hidden",
-            "min-h-[32px] h-[32px] overflow-x-hidden focus:h-[120px] overflow-y-hidden transition-[height] w-[500px] py-1 px-3 bg-background resize-none"
+            "min-h-[32px] h-[32px] overflow-x-hidden focus:h-[120px] overflow-y-hidden transition-[height] w-full md:w-[500px] py-1 px-3 bg-background resize-none"
           )}
           style={{
             scrollbarGutter: "stable",
@@ -84,7 +84,7 @@ const PromptInput = () => {
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
         >
-          Paint
+          修复
         </Button>
       </div>
     </div>
